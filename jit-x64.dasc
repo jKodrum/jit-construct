@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
 	unsigned int maxpc = 0;
 	int pcstack[MAX_NESTING];
 	int *top = pcstack, *limit = pcstack + MAX_NESTING;
+	int cnt;
 
 	// Function prologue.
 	|  push PTR
@@ -39,15 +40,43 @@ int main(int argc, char *argv[])
 	for (char *p = read_file(argv[1]); *p; p++) {
 		switch (*p) {
 		case '>':
+			for (cnt=1, p++; *p == '>'; p++)
+				cnt++;
+			p--;
+			if(cnt>1) {
+				|  add PTR, cnt
+				break;
+			}
 			|  inc  PTR
 			break;
 		case '<':
+			for (cnt=1, p++; *p == '<'; p++)
+				cnt++;
+			p--;
+			if(cnt>1) {
+				|  sub PTR, cnt
+				break;
+			}
 			|  dec  PTR
 			break;
 		case '+':
+			for (cnt=1, p++; *p == '+'; p++)
+				cnt++;
+			p--;
+			if(cnt>1) {
+				|  add byte [PTR], cnt
+				break;
+			}
 			|  inc  byte [PTR]
 			break;
 		case '-':
+			for (cnt=1, p++; *p == '-'; p++)
+				cnt++;
+			p--;
+			if(cnt>1) {
+				|  sub byte [PTR], cnt
+				break;
+			}
 			|  dec  byte [PTR]
 			break;
 		case '.':
@@ -62,6 +91,13 @@ int main(int argc, char *argv[])
 			if(*(p+1)=='-' && *(p+2)==']') {
 				| mov byte [PTR] ,0
 				p+=2;
+				break;
+			}
+			if (*(p+1)=='>' && *(p+2)=='+' && *(p+3)=='<'
+					&& *(p+4)=='-' && *(p+4)==']') {
+				cnt = *p;
+				|  add  byte [PTR+1], cnt
+				|  mov  byte [PTR], 0
 				break;
 			}
 			if (top == limit) err("Nesting too deep.");
